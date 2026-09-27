@@ -66,7 +66,7 @@ jobs:
       - name: Install pipeline dependencies
         run: |
           pip install -r requirements.txt
-          dbt deps --project-dir mediequip_dbt
+          dbt deps
 
       # ── Stage 1 — Ingest ──────────────────────────────────────────────────
       - name: "[Stage 1] Ingest raw CSVs from S3 → PostgreSQL"
@@ -77,7 +77,7 @@ jobs:
           MEDIEQUIP_DB_HOST:      ${{ secrets.MEDIEQUIP_DB_HOST }}
           MEDIEQUIP_DB_PASSWORD:  ${{ secrets.MEDIEQUIP_DB_PASSWORD }}
         run: |
-          python mediequip_dbt/ingest_from_s3.py --env prod
+          python ingest_from_s3.py --env prod
 
       # ── Stage 2 — Validate raw sources ───────────────────────────────────
       - name: "[Stage 2] dbt source tests — raw data validation"
@@ -86,8 +86,6 @@ jobs:
           MEDIEQUIP_DB_PASSWORD:  ${{ secrets.MEDIEQUIP_DB_PASSWORD }}
         run: |
           dbt test \
-            --project-dir mediequip_dbt \
-            --profiles-dir mediequip_dbt \
             --select "source:mediequip_raw" \
             --target prod
 
@@ -108,8 +106,6 @@ jobs:
           fi
 
           dbt build \
-            --project-dir mediequip_dbt \
-            --profiles-dir mediequip_dbt \
             --target prod \
             $FULL_REFRESH_FLAG \
             $SELECT_FLAG
@@ -123,7 +119,7 @@ jobs:
           MEDIEQUIP_DB_HOST:      ${{ secrets.MEDIEQUIP_DB_HOST }}
           MEDIEQUIP_DB_PASSWORD:  ${{ secrets.MEDIEQUIP_DB_PASSWORD }}
         run: |
-          python mediequip_dbt/export_parquet_to_s3.py
+          python export_parquet_to_s3.py
 
       # ── Stage 5 — Notify ──────────────────────────────────────────────────
       - name: "[Stage 5] Notify — Pipeline SUCCESS"
@@ -147,6 +143,6 @@ jobs:
         with:
           name: dbt-logs-${{ github.run_id }}
           path: |
-            mediequip_dbt/logs/
-            mediequip_dbt/target/run_results.json
+            logs/
+            target/run_results.json
           retention-days: 14
