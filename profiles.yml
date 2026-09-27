@@ -1,0 +1,12 @@
+mediequip_postgres:
+  outputs:
+    dev:
+      dbname: mediequip_dw
+      host: localhost
+      pass: Dnk@33street
+      port: 5433
+      schema: public
+      threads: 1
+      type: postgres
+      user: mediequip_dbt
+  target: dev

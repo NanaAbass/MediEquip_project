@@ -1,0 +1,133 @@
+# models/marts/dimensions/schema.yml
+# ─────────────────────────────────────────────────────────────────────────────
+# Tests and documentation for the four MediEquip Ghana dimension tables.
+# ─────────────────────────────────────────────────────────────────────────────
+
+version: 2
+
+models:
+
+  # ── dim_date ────────────────────────────────────────────────────────────────
+  - name: dim_date
+    description: >
+      Calendar dimension spanning 2020-01-01 to 2030-12-31. Generated entirely
+      from PostgreSQL's generate_series() — no source data required.
+      date_key (YYYYMMDD integer) is the FK referenced by all five fact tables.
+    config:
+      tags: ["dimension", "date"]
+    columns:
+      - name: date_key
+        description: "Integer YYYYMMDD — primary key and FK target in all fact tables"
+        tests: [not_null, unique]
+      - name: full_date
+        tests: [not_null, unique]
+      - name: year
+        tests: [not_null]
+      - name: quarter_number
+        tests:
+          - not_null
+          - accepted_values:
+              values: [1, 2, 3, 4]
+      - name: quarter_name
+        tests:
+          - accepted_values:
+              values: ["Q1", "Q2", "Q3", "Q4"]
+      - name: month_number
+        tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              expression: "month_number BETWEEN 1 AND 12"
+      - name: day_of_week_number
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "day_of_week_number BETWEEN 1 AND 7"
+      - name: is_weekend
+        tests: [not_null]
+      - name: is_weekday
+        tests: [not_null]
+
+  # ── dim_customer ────────────────────────────────────────────────────────────
+  - name: dim_customer
+    description: >
+      One row per unique customer. Derived from fact_sales and fact_ar.
+      The column swap bug (customer_type ↔ region) is already corrected in the
+      staging layer — this dimension reads the corrected values.
+      SCD Type 1 — latest attribute values win.
+    config:
+      tags: ["dimension", "customer"]
+    columns:
+      - name: customer_key
+        description: "Integer surrogate PK — referenced by fact_sales.customer_key and fact_ar.customer_key"
+        tests: [not_null, unique]
+      - name: customer_name
+        tests: [not_null, unique]
+      - name: ghana_region
+        tests: [not_null]
+      - name: customer_type
+        tests: [not_null]
+      - name: ownership
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["Public", "Private", "NGO"]
+      - name: ownership_group
+        tests:
+          - accepted_values:
+              values: ["Government / Public Sector", "Private Sector", "NGO / Non-Profit", "Unknown"]
+
+  # ── dim_product ─────────────────────────────────────────────────────────────
+  - name: dim_product
+    description: >
+      One row per unique product. Derived from fact_sales (supplier linkage)
+      and fact_inventory (current unit cost and reorder level from latest snapshot).
+      SCD Type 1 — latest values win.
+    config:
+      tags: ["dimension", "product"]
+    columns:
+      - name: product_key
+        description: "Integer surrogate PK — referenced by fact_sales.product_key, fact_shipments.product_key, fact_inventory.product_key"
+        tests: [not_null, unique]
+      - name: product_name
+        tests: [not_null, unique]
+      - name: category
+        tests: [not_null]
+      - name: is_active
+        tests: [not_null]
+      - name: current_unit_cost
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "current_unit_cost > 0"
+              severity: warn    # some products may lack inventory snapshots
+      - name: reorder_level
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: "reorder_level > 0"
+              severity: warn
+
+  # ── dim_supplier ────────────────────────────────────────────────────────────
+  - name: dim_supplier
+    description: >
+      One row per unique supplier. Derived from fact_shipments (base list,
+      preferred port) and fact_supplier_performance (scorecard attributes from
+      the most recent year). SCD Type 1 — latest year's performance wins.
+    config:
+      tags: ["dimension", "supplier"]
+    columns:
+      - name: supplier_key
+        description: "Integer surrogate PK — referenced by fact_sales.supplier_key, fact_shipments.supplier_key, fact_supplier_performance.supplier_key"
+        tests: [not_null, unique]
+      - name: supplier
+        tests: [not_null, unique]
+      - name: supplier_country
+        tests: [not_null]
+      - name: supplier_tier
+        tests:
+          - accepted_values:
+              values: ["Tier 1", "Tier 2", "Tier 3", "Unscored"]
+      - name: preferred_port
+        tests:
+          - accepted_values:
+              values: ["Tema Port", "Kotoka Airport Cargo"]
+              severity: warn    # new suppliers may not have shipment records yet
+      - name: is_active
+        tests: [not_null]

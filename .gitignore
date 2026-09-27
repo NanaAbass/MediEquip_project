@@ -1,0 +1,18 @@
+# dbt
+target/
+dbt_packages/
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Local credentials — NEVER commit
+.env
+profiles.yml          # contains DB password via env_var() — still keep out of git
+
+# Parquet temp files
+/tmp/*.parquet

@@ -1,0 +1,35 @@
+name: mediequip_ghana
+version: "1.0.0"
+config-version: 2
+
+profile: mediequip_postgres
+
+model-paths:    ["models"]
+macro-paths:    ["macros"]
+test-paths:     ["tests"]
+seed-paths:     ["seeds"]
+analysis-paths: ["analyses"]
+target-path:    "target"
+clean-targets:  ["target", "dbt_packages"]
+
+# ─── Model materialisation defaults ──────────────────────────────────────────
+# staging     → mediequip_dw.staging   (lightweight views)
+# marts       → mediequip_dw.marts     (fact tables — Power BI connects here)
+# dimensions  → mediequip_dw.marts     (dim tables sit in the same schema as facts
+#               so Power BI sees a single clean star schema in one schema)
+models:
+  mediequip_ghana:
+    staging:
+      +materialized: view
+      +schema: staging
+    marts:
+      +materialized: table
+      +schema: marts
+      dimensions:
+        +materialized: table
+        +schema: marts          # dimensions land in the same marts schema as facts
+
+# ─── Variables ───────────────────────────────────────────────────────────────
+vars:
+  s3_raw_bucket: "mediequip-raw"
+  full_refresh: false

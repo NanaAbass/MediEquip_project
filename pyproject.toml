@@ -1,0 +1,22 @@
+[project]
+name = "dbt-orchestration"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "NanaAbass", email = "nana.abaasah@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.43.103",
+    "dbt-core>=1.12.0",
+    "dbt-postgres>=1.11.0",
+    "pyarrow>=25.0.1",
+]
+
+[project.scripts]
+dbt-orchestration = "dbt_orchestration:main"
+
+[build-system]
+requires = ["uv_build>=0.12.1,<0.13.0"]
+build-backend = "uv_build"
