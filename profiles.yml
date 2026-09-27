@@ -3,7 +3,7 @@ mediequip_postgres:
     dev:
       dbname: mediequip_dw
       host: localhost
-      pass: 
+      password: Dnk@33street 
       port: 5433
       schema: public
       threads: 1
@@ -13,7 +13,7 @@ mediequip_postgres:
       type: postgres
       host: localhost
       user: mediequip_dbt
-      password: 
+      password: Dnk@33street
       port: 5433
       dbname: mediequip_dw
       schema: marts
