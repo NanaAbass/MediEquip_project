@@ -1,7 +1,5 @@
 # MediEquip Ghana — dbt + PostgreSQL ETL Pipeline
-
-**Data Engineer:** Ama Boateng  
-**Migrated from:** AWS Glue + Step Functions + RDS SQL Server  
+ 
 **Stack:** dbt Core + Self-hosted PostgreSQL + GitHub Actions
 
 ---
@@ -459,18 +457,3 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 ```
 
 ---
-
-## Complete AWS → PostgreSQL + dbt Component Map
-
-| Old Component | New Component | File |
-|---|---|---|
-| AWS Glue (5 jobs) | dbt staging + mart models | `models/` |
-| `mediequip_utils.py` helpers | dbt macros + Python scripts | `macros/`, `ingest_from_s3.py` |
-| `sp_resolve_fk` stored procedure | Dimension `LEFT JOIN` in each fact model | `models/marts/` |
-| Step Functions state machine | GitHub Actions workflow | `.github/workflows/` |
-| EventBridge cron | GitHub Actions `schedule: cron` | `.github/workflows/` |
-| AWS Secrets Manager | GitHub Actions Secrets + env vars | repo settings |
-| AWS RDS SQL Server | Self-hosted PostgreSQL (`mediequip_dw`) | `setup_postgres.sql` |
-| CloudWatch alarms | GitHub Actions failure notifications | `.github/workflows/` |
-| S3 Parquet writes | `export_parquet_to_s3.py` | root |
-| *(no equivalent)* | `dim_date`, `dim_customer`, `dim_product`, `dim_supplier` | `models/marts/dimensions/` |
