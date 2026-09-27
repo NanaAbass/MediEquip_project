@@ -108,7 +108,7 @@ jobs:
       - name: "[Stage 3] dbt build — staging views + 5 fact tables"
         env:
           MEDIEQUIP_DB_HOST:      localhost
-          MEDIEQUIP_DB_PASSWORD:  ${{ secrets.MEDIEQUIP_DB_PASSWORD }}
+          MEDIEQUIP_DB_PASSWORD:  Dnk@33street
         run: |
           FULL_REFRESH_FLAG=""
           if [ "${{ github.event.inputs.full_refresh }}" = "yes" ]; then
@@ -132,7 +132,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           S3_PROCESSED_BUCKET:    ${{ secrets.S3_PROCESSED_BUCKET }}
           MEDIEQUIP_DB_HOST:      localhost
-          MEDIEQUIP_DB_PASSWORD:  ${{ secrets.MEDIEQUIP_DB_PASSWORD }}
+          MEDIEQUIP_DB_PASSWORD:  Dnk@33street
         run: |
           python export_parquet_to_s3.py
 
