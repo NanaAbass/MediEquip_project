@@ -89,7 +89,7 @@ jobs:
           AWS_ACCESS_KEY_ID:      ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           S3_RAW_BUCKET:          ${{ secrets.S3_RAW_BUCKET }}
-          MEDIEQUIP_DB_HOST:      ${{ secrets.MEDIEQUIP_DB_HOST }}
+          MEDIEQUIP_DB_HOST:      localhost
           MEDIEQUIP_DB_PASSWORD:  ${{ secrets.MEDIEQUIP_DB_PASSWORD }}
         run: |
           python ingest_from_s3.py --env prod
@@ -97,7 +97,7 @@ jobs:
       # ── Stage 2 — Validate raw sources ───────────────────────────────────
       - name: "[Stage 2] dbt source tests — raw data validation"
         env:
-          MEDIEQUIP_DB_HOST:      ${{ secrets.MEDIEQUIP_DB_HOST }}
+          MEDIEQUIP_DB_HOST:      localhost
           MEDIEQUIP_DB_PASSWORD:  ${{ secrets.MEDIEQUIP_DB_PASSWORD }}
         run: |
           dbt test \
@@ -107,7 +107,7 @@ jobs:
       # ── Stage 3 — Transform ───────────────────────────────────────────────
       - name: "[Stage 3] dbt build — staging views + 5 fact tables"
         env:
-          MEDIEQUIP_DB_HOST:      ${{ secrets.MEDIEQUIP_DB_HOST }}
+          MEDIEQUIP_DB_HOST:      localhost
           MEDIEQUIP_DB_PASSWORD:  ${{ secrets.MEDIEQUIP_DB_PASSWORD }}
         run: |
           FULL_REFRESH_FLAG=""
@@ -131,7 +131,7 @@ jobs:
           AWS_ACCESS_KEY_ID:      ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           S3_PROCESSED_BUCKET:    ${{ secrets.S3_PROCESSED_BUCKET }}
-          MEDIEQUIP_DB_HOST:      ${{ secrets.MEDIEQUIP_DB_HOST }}
+          MEDIEQUIP_DB_HOST:      localhost
           MEDIEQUIP_DB_PASSWORD:  ${{ secrets.MEDIEQUIP_DB_PASSWORD }}
         run: |
           python export_parquet_to_s3.py
