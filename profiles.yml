@@ -9,4 +9,13 @@ mediequip_postgres:
       threads: 1
       type: postgres
       user: mediequip_dbt
+    prod:  
+      type: postgres
+      host: localhost
+      user: mediequip_dbt
+      password: 
+      port: 5433
+      dbname: mediequip_dw
+      schema: marts
+      threads: 4
   target: dev
