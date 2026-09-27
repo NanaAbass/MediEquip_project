@@ -134,7 +134,7 @@ jobs:
             "SELECT table_name FROM information_schema.tables WHERE table_schema='marts' ORDER BY table_name;" || exit 1
     
             # Verify all 5 fact tables exist
-            TABLE_COUNT=$(psql -h localhost -U mediequip_dbt -d mediequip_dw -p 5433 -t -c \
+          TABLE_COUNT=$(psql -h localhost -U mediequip_dbt -d mediequip_dw -p 5433 -t -c \
             "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='marts' AND table_name LIKE 'fact_%'")
     
           if [ "$TABLE_COUNT" -ne 5 ]; then
