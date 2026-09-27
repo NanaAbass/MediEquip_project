@@ -60,7 +60,7 @@ jobs:
           POSTGRES_USER: mediequip_dbt
           POSTGRES_PASSWORD: ${{ secrets.MEDIEQUIP_DB_PASSWORD }}
         options: >-
-          --health-cmd "pg_isready -p 5433"
+          --health-cmd "pg_isready -U mediequip_dbt -d mediequip_dw"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
