@@ -3,7 +3,7 @@ mediequip_postgres:
     dev:
       dbname: mediequip_dw
       host: localhost
-      pass: Dnk@33street
+      pass: 
       port: 5433
       schema: public
       threads: 1
