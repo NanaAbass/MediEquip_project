@@ -1,7 +1,5 @@
 # MediEquip Ghana — dbt + PostgreSQL ETL Pipeline
 
-**Data Engineer:** Ama Boateng
-**Migrated from:** AWS Glue + Step Functions + RDS SQL Server
 **Stack:** dbt Core + Self-hosted PostgreSQL + GitHub Actions
 
 ---
@@ -285,17 +283,4 @@ This is enabled by `setup_postgres.sql`. If you see an error like
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 ```
 
----
 
-## Complete AWS → PostgreSQL Component Map
-
-| Old Component | New Component |
-|---|---|
-| AWS Glue (5 jobs) | dbt models (5 staging + 5 mart) |
-| `mediequip_utils.py` | `macros/mediequip_macros.sql` + `ingest_from_s3.py` |
-| Step Functions state machine | GitHub Actions workflow stages |
-| EventBridge cron | GitHub Actions `schedule: cron` |
-| AWS Secrets Manager | GitHub Actions Secrets + env vars |
-| AWS RDS SQL Server | Self-hosted PostgreSQL (`mediequip_dw`) |
-| CloudWatch alarms | GitHub Actions failure notifications |
-| S3 Parquet writes | `export_parquet_to_s3.py` |
