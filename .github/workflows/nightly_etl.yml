@@ -1,0 +1,152 @@
+# .github/workflows/nightly_etl.yml
+# ─────────────────────────────────────────────────────────────────────────────
+# MediEquip Ghana — Nightly ETL Pipeline
+# Target database: Self-hosted PostgreSQL
+#
+# PIPELINE STAGES:
+#   Stage 1 — Ingest:     S3 CSVs → PostgreSQL raw schema
+#   Stage 2 — Test raw:   dbt test --select source:mediequip_raw
+#   Stage 3 — Transform:  dbt build (staging views + 5 fact tables)
+#   Stage 4 — Export:     PostgreSQL marts → S3 Parquet
+#   Stage 5 — Notify:     Success/failure notification
+#
+# SECRETS REQUIRED (GitHub repo → Settings → Secrets → Actions):
+#   AWS_ACCESS_KEY_ID
+#   AWS_SECRET_ACCESS_KEY
+#   S3_RAW_BUCKET
+#   S3_PROCESSED_BUCKET
+#   MEDIEQUIP_DB_PASSWORD    PostgreSQL password for mediequip_dbt user
+#   MEDIEQUIP_DB_HOST        Your server IP or hostname (e.g. 192.168.1.10)
+#   SLACK_WEBHOOK_URL        (optional)
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: MediEquip ETL — Nightly Pipeline
+
+on:
+  schedule:
+    - cron: "0 2 * * *"    # 2:00 AM GMT every day
+
+  workflow_dispatch:
+    inputs:
+      full_refresh:
+        description: "Full refresh all incremental models? (yes/no)"
+        required: false
+        default: "no"
+      target_model:
+        description: "Run a specific model only (leave blank for all)"
+        required: false
+        default: ""
+
+env:
+  AWS_DEFAULT_REGION:   us-east-1
+  MEDIEQUIP_DB_NAME:    mediequip_dw
+  MEDIEQUIP_DB_USER:    mediequip_dbt
+  MEDIEQUIP_DB_PORT:    "5433"
+  DBT_PROFILES_DIR:     .
+  PYTHON_VERSION:       "3.11"
+
+jobs:
+
+  etl_pipeline:
+    name: "MediEquip ETL Pipeline"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install pipeline dependencies
+        run: |
+          pip install -r requirements.txt
+          dbt deps --project-dir mediequip_dbt
+
+      # ── Stage 1 — Ingest ──────────────────────────────────────────────────
+      - name: "[Stage 1] Ingest raw CSVs from S3 → PostgreSQL"
+        env:
+          AWS_ACCESS_KEY_ID:      ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_RAW_BUCKET:          ${{ secrets.S3_RAW_BUCKET }}
+          MEDIEQUIP_DB_HOST:      ${{ secrets.MEDIEQUIP_DB_HOST }}
+          MEDIEQUIP_DB_PASSWORD:  ${{ secrets.MEDIEQUIP_DB_PASSWORD }}
+        run: |
+          python mediequip_dbt/ingest_from_s3.py --env prod
+
+      # ── Stage 2 — Validate raw sources ───────────────────────────────────
+      - name: "[Stage 2] dbt source tests — raw data validation"
+        env:
+          MEDIEQUIP_DB_HOST:      ${{ secrets.MEDIEQUIP_DB_HOST }}
+          MEDIEQUIP_DB_PASSWORD:  ${{ secrets.MEDIEQUIP_DB_PASSWORD }}
+        run: |
+          dbt test \
+            --project-dir mediequip_dbt \
+            --profiles-dir mediequip_dbt \
+            --select "source:mediequip_raw" \
+            --target prod
+
+      # ── Stage 3 — Transform ───────────────────────────────────────────────
+      - name: "[Stage 3] dbt build — staging views + 5 fact tables"
+        env:
+          MEDIEQUIP_DB_HOST:      ${{ secrets.MEDIEQUIP_DB_HOST }}
+          MEDIEQUIP_DB_PASSWORD:  ${{ secrets.MEDIEQUIP_DB_PASSWORD }}
+        run: |
+          FULL_REFRESH_FLAG=""
+          if [ "${{ github.event.inputs.full_refresh }}" = "yes" ]; then
+            FULL_REFRESH_FLAG="--full-refresh"
+          fi
+
+          SELECT_FLAG=""
+          if [ -n "${{ github.event.inputs.target_model }}" ]; then
+            SELECT_FLAG="--select ${{ github.event.inputs.target_model }}"
+          fi
+
+          dbt build \
+            --project-dir mediequip_dbt \
+            --profiles-dir mediequip_dbt \
+            --target prod \
+            $FULL_REFRESH_FLAG \
+            $SELECT_FLAG
+
+      # ── Stage 4 — Export Parquet to S3 ───────────────────────────────────
+      - name: "[Stage 4] Export PostgreSQL marts → S3 Parquet"
+        env:
+          AWS_ACCESS_KEY_ID:      ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY:  ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_PROCESSED_BUCKET:    ${{ secrets.S3_PROCESSED_BUCKET }}
+          MEDIEQUIP_DB_HOST:      ${{ secrets.MEDIEQUIP_DB_HOST }}
+          MEDIEQUIP_DB_PASSWORD:  ${{ secrets.MEDIEQUIP_DB_PASSWORD }}
+        run: |
+          python mediequip_dbt/export_parquet_to_s3.py
+
+      # ── Stage 5 — Notify ──────────────────────────────────────────────────
+      - name: "[Stage 5] Notify — Pipeline SUCCESS"
+        if: success()
+        run: |
+          echo "SUCCESS: All 5 MediEquip Ghana ETL models built in PostgreSQL."
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data '{"text":"✅ MediEquip ETL SUCCESS — PostgreSQL warehouse updated."}' 
+
+      - name: "[Stage 5] Notify — Pipeline FAILURE"
+        if: failure()
+        run: |
+          echo "FAILURE: MediEquip ETL pipeline failed. Check logs."
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data "{\"text\":\"🚨 MediEquip ETL FAILED — ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}" 
+          exit 1
+
+      - name: Upload dbt logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-logs-${{ github.run_id }}
+          path: |
+            mediequip_dbt/logs/
+            mediequip_dbt/target/run_results.json
+          retention-days: 14
