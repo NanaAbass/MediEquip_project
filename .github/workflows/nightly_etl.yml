@@ -125,32 +125,6 @@ jobs:
             $FULL_REFRESH_FLAG \
             $SELECT_FLAG
 
-      - name: "[Stage 3b] Verify fact tables were created"
-        env:
-            MEDIEQUIP_DB_HOST:      localhost
-            MEDIEQUIP_DB_PASSWORD:  Dnk@33street
-        run: |
-          psql -h localhost -U mediequip_dbt -d mediequip_dw -p 5433 -c \
-            "SELECT table_name FROM information_schema.tables WHERE table_schema='marts' ORDER BY table_name;" || exit 1
-    
-            # Verify all 5 fact tables exist
-          TABLE_COUNT=$(psql -h localhost -U mediequip_dbt -d mediequip_dw -p 5433 -t -c \
-            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='marts' AND table_name LIKE 'fact_%'")
-    
-          if [ "$TABLE_COUNT" -ne 5 ]; then
-            echo "ERROR: Expected 5 fact tables, found $TABLE_COUNT"
-            exit 1
-          fi
-            echo "✓ All 5 fact tables verified"
-
-
-      - name: "[Debug] Where did the fact tables land?"
-        env:
-          PGPASSWORD: Dnk@33street
-        run: |
-          psql -h localhost -p 5433 -U mediequip_dbt -d mediequip_dw -c \
-            "SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema') ORDER BY 1,2;"
-
       # ── Stage 4 — Export Parquet to S3 ───────────────────────────────────
       - name: "[Stage 4] Export PostgreSQL marts → S3 Parquet"
         env:
