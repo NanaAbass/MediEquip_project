@@ -146,7 +146,7 @@ jobs:
 
       - name: "[Debug] Where did the fact tables land?"
         env:
-          PGPASSWORD: ${{ secrets.MEDIEQUIP_DB_PASSWORD }}
+          PGPASSWORD: Dnk@33street
         run: |
           psql -h localhost -p 5433 -U mediequip_dbt -d mediequip_dw -c \
             "SELECT table_schema, table_name FROM information_schema.tables WHERE table_schema NOT IN ('pg_catalog','information_schema') ORDER BY 1,2;"
